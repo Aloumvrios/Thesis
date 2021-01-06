@@ -12,6 +12,7 @@ from time import time
 from thesis_core.thesis_core import ThesisCore
 import researchpy
 import arff
+import random
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -325,7 +326,7 @@ def read_arff_data():
 
 def test_h5():
     df1 = pd.DataFrame([[1, 1.0, 'a']], columns=['x', 'y', 'z'])
-    df2 = pd.DataFrame([[4, 1.0, 'g','jikoukou']], columns=['t', 'k', 'm','mplou'])
+    df2 = pd.DataFrame([[4, 1.0, 'g', 'jikoukou']], columns=['t', 'k', 'm', 'mplou'])
 
     df1.to_hdf('./store.h5', 'data1')
     df2.to_hdf('./store.h5', 'data2')
@@ -336,8 +337,122 @@ def test_h5():
         # List all groups
         print("Keys: %s" % f.keys())
         for i in list(f.keys()):
-            reread = pd.read_hdf('./store.h5',i)
+            reread = pd.read_hdf('./store.h5', i)
             print(reread)
+
+
+def dynamic_sampling(enhanced_decay=True):
+    # Intialise data to Dicts of series.
+    d = {'a': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'b': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'c': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'd': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'e': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'f': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'g': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'h': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'i': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'j': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'k': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'l': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'm': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'n': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'o': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'p': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'q': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         'r': pd.Series([random.uniform(0, 1) for i in range(3000)]),
+         's': pd.Series([random.uniform(0, 1) for i in range(3000)])
+         }
+    di_l = []
+    for bias_decay in np.linspace(0.5, 1, 6):
+        # creates Dataframe.
+        df = pd.DataFrame(d)
+        df['weights'] = 1
+        plithos = 1000 if len(df) * 0.1 > 1000 else int(len(df) * 0.1)
+        first_sample = df.sample(n=plithos, weights=df.weights, random_state=2020)
+
+        start = time()
+        dfs = []
+        attempts = []
+        ind_list = []
+        dfs.append(first_sample)
+        df.loc[list(first_sample.index), 'weights'] = df.loc[list(first_sample.index), 'weights'] * bias_decay
+
+        for ind, i in enumerate(range(15 - 1)):
+            found = False
+            while not found:
+                next_sample = df.sample(n=plithos, weights=df.weights).drop(['weights'],
+                                                                            axis=1)
+                found = True
+                for dfr in dfs:
+                    p_value = get_permutation_of_pdists(dfr, next_sample)
+                    if p_value > 0.05:
+                        attempts.append(p_value)
+                        found = False
+                        if enhanced_decay:
+                            temp_v = df.loc[list(next_sample.index), 'weights']
+                            df.loc[list(
+                                next_sample.index), 'weights'] = temp_v * bias_decay if (
+                                        temp_v * bias_decay).any() else temp_v
+                        break
+            dfs.append(next_sample)
+            temp_v = df.loc[list(next_sample.index), 'weights']
+            df.loc[list(next_sample.index), 'weights'] = temp_v * bias_decay if (temp_v * bias_decay).any() else temp_v
+
+            ind_list.append(i)
+        end = time()
+        print(f"~split_datasets ended!It took {end - start} seconds!")
+        di = {'bias_decay': bias_decay,
+              'time': end - start,
+              'failed_attempts': len(attempts)
+              }
+        di_l.append(di)
+
+    # add squared decay
+    # creates Dataframe.
+    df = pd.DataFrame(d)
+    df['weights'] = 0.9
+    plithos = 1000 if len(df) * 0.1 > 1000 else int(len(df) * 0.1)
+    first_sample = df.sample(n=plithos, weights=df.weights, random_state=2020)
+
+    start = time()
+    dfs = []
+    attempts = []
+    ind_list = []
+    dfs.append(first_sample)
+    df.loc[list(first_sample.index), 'weights'] = df.loc[list(first_sample.index), 'weights'] ** 2
+
+    for ind, i in enumerate(range(15 - 1)):
+
+        found = False
+        while not found:
+            next_sample = df.sample(n=plithos, weights=df.weights).drop(['weights'],
+                                                                        axis=1)
+            found = True
+            for dfr in dfs:
+                p_value = get_permutation_of_pdists(dfr, next_sample)
+                if p_value > 0.05:
+                    attempts.append(p_value)
+                    found = False
+                    if enhanced_decay:
+                        temp_v = df.loc[list(next_sample.index), 'weights']
+                        df.loc[list(next_sample.index), 'weights'] = temp_v ** 2 if (temp_v ** 2).any() else temp_v
+                    break
+        dfs.append(next_sample)
+        temp_v = df.loc[list(next_sample.index), 'weights']
+        df.loc[list(next_sample.index), 'weights'] = temp_v ** 2 if (temp_v ** 2).any() else temp_v
+        ind_list.append(i)
+    end = time()
+    print(f"~split_datasets ended!It took {end - start} seconds!")
+    di = {'bias_decay': 2,
+          'time': end - start,
+          'failed_attempts': len(attempts)
+          }
+    di_l.append(di)
+
+    di_df = pd.DataFrame(di_l)
+    sns.scatterplot(data=di_df, x='bias_decay', y='time', hue='failed_attempts', size='failed_attempts')
+    plt.show()
 
 
 if __name__ == '__main__':
@@ -375,4 +490,5 @@ if __name__ == '__main__':
     # kai oriaki apostash 0.9997031552913787
 
     # repr_dict = read_arff_data()
-    test_h5()
+    # test_h5()
+    dynamic_sampling()

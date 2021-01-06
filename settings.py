@@ -1,5 +1,5 @@
 max_datasets = 30
-num_of_datasets = 10
+num_of_datasets = 30
 num_of_important_features = 4
 alpha = 0.05
 kmer = 2

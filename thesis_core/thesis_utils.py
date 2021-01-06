@@ -10,20 +10,34 @@ from mlxtend.evaluate import permutation_test
 
 
 def split_dataset(feature_df):
+    """
+    Creates a list of datasets by sampling the input dataset. The sampled datasets are
+    adequetly different from eachother. The method used and the number of samples are
+    defined in the settings file.
+    :param feature_df: the input dataframe
+    :return: a dataframe list
+    """
     start = time()
     dfs = []
     attempts = []
     time_list = []
     ind_list = []
     feature_df_copy = feature_df.copy()
-    first_sample = feature_df_copy.sample(frac=0.1)
+    feature_df_copy['weights'] = 1
+    bias_decay = 0.9
+    plithos = 1000 if len(feature_df_copy) * 0.1 > 1000 else int(len(feature_df_copy) * 0.1)
+    first_sample = feature_df_copy.sample(n=plithos, weights=feature_df_copy.weights, random_state=2020).drop(
+        ['weights'], axis=1)
     dfs.append(first_sample)
+    feature_df_copy.loc[list(first_sample.index), 'weights'] = feature_df_copy.loc[
+                                                                   list(first_sample.index), 'weights'] * bias_decay
     for ind, i in enumerate(range(max_datasets - 1)):
+
         loop_start = time()
         found = False
         while not found:
             # print(len(feature_df_copy))
-            next_sample = feature_df_copy.sample(frac=0.1)
+            next_sample = feature_df_copy.sample(n=plithos, weights=feature_df_copy.weights).drop(['weights'], axis=1)
             # print(len(next_sample))
             found = True
             for dfr in dfs:
@@ -32,6 +46,12 @@ def split_dataset(feature_df):
                     if p_value > alpha:
                         attempts.append(p_value)
                         found = False
+                        # apply weight decay if the sampled dataset is rejected,
+                        # to favor the other instances in the next sampling
+                        temp_v = feature_df_copy.loc[list(next_sample.index), 'weights']
+                        feature_df_copy.loc[list(
+                            next_sample.index), 'weights'] = temp_v * bias_decay if (
+                                temp_v * bias_decay).any() else temp_v
                         break
                 elif method == 'KS_pdist':
                     p_value = get_KS_of_pdists(dfr, next_sample)
@@ -47,6 +67,9 @@ def split_dataset(feature_df):
                         found = False
                         break
         dfs.append(next_sample)
+        temp_v = feature_df_copy.loc[list(next_sample.index), 'weights']
+        feature_df_copy.loc[list(next_sample.index), 'weights'] = temp_v * bias_decay if (
+                    temp_v * bias_decay).any() else temp_v
         loop_end = time()
         time_diff = loop_end - loop_start
         # print('len dfs', len(dfs), time_diff)
@@ -140,6 +163,14 @@ def get_KS_of_pdists(temp_df1, temp_df2):
 
 
 def get_permutation_of_pdists(temp_df1, temp_df2):
+    """
+    Applies the Mantel test on two dataframes.
+    First the pairwise distance matrix of each dataframe is computed.
+    Then a permutation test is applied on the two distributions.
+    :param temp_df1: Dataframe
+    :param temp_df2: Dataframe
+    :return: p value of the permutation test
+    """
     temp_df1_pdist, temp_df2_pdist = get_pdists(temp_df1, temp_df2)
 
     # print("~Starting permutation test!")

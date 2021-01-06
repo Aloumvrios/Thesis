@@ -1,19 +1,10 @@
 import os
 import sys
-
-import h5py
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 import random
 import logging
-
-logging.basicConfig(filename='mylog.log', level=logging.INFO)
-
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.width', None)
-pd.set_option('display.max_colwidth', None)
 from repr_core.repr_core import ReprCore
 from ml_core.ml_core import Classifiers, Regressors, Statistics
 from thesis_core.thesis_utils import split_dataset, get_mean_cdist
@@ -24,6 +15,13 @@ import settings
 import pickle
 import arff
 from scipy import stats
+
+logging.basicConfig(filename='mylog.log', level=logging.INFO)
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+pd.set_option('display.max_colwidth', None)
 
 
 class ThesisCore(object):
@@ -147,6 +145,7 @@ class ThesisCore(object):
     def pick_c_classes(self, df):
         c = settings.no_of_classes
         classes = df[df.columns[-1]].unique().tolist()
+        random.seed(2020)
         chosen_classes = random.sample(classes, c)
         new_df = df[df[df.columns[-1]].isin(chosen_classes)]
         return new_df
@@ -187,16 +186,11 @@ class ThesisCore(object):
     def read_split_dataset(self, repr):
         print("~Splitting started!")
         start = time()
-        # fname = repr.name + settings.file_suffix
-        fname = repr.name + '_' + str(settings.alpha) + '_' + settings.method
+        fname = repr.name + '_c' + str(settings.no_of_classes) + '_a' + str(settings.alpha) + '_' + settings.method
         got_enough_datasets = False
         if os.path.exists(fname):
             with open(fname, 'rb') as f:
                 df_list = pickle.load(f)
-            # with h5py.File(fname, "r") as f:
-            #     # List all groups
-            #     # print("Keys: %s" % f.keys())
-            #     df_list = [pd.read_hdf(fname, i) for i in list(f.keys())]
 
             if len(df_list) >= settings.num_of_datasets:
                 got_enough_datasets = True
@@ -206,16 +200,12 @@ class ThesisCore(object):
         else:
             datapath = 'C:/Users/Nick/Google Drive/Study/DataScience/_Nikolaou_DSC18014_Thesis/data2'
             filepath = os.path.join(datapath, repr.name)
-            # print(filepath)
             repr_df = self.read_arff_data(filepath)
-            # print(repr_df.shape)
             repr_df = self.pick_c_classes(repr_df)
-            # print(repr_df.shape)
             repr.set_repr_df(repr_df)
             df_list = split_dataset(repr.repr_df)
             repr.set_repr_df_list(df_list)
-            # for i, df in enumerate(df_list):
-            #     df.to_hdf(fname, 'data'+str(i))
+
             with open(fname, 'wb') as f:
                 pickle.dump(df_list, f)
         end = time()
@@ -288,17 +278,6 @@ class ThesisCore(object):
             # plot correlation matrix
             sns.heatmap(combination.corr(method='pearson').iloc[9:, :9], annot=True, fmt=".2f")
             plt.show()
-
-    def print_descriptions(self):
-        for name, repr in self._repr_core.reprs.items():
-            fname = name + "_descriptions_" + settings.file_suffix
-            if os.path.exists(fname):
-                descriptions = pd.read_pickle(fname)
-            print(descriptions)
-            print(descriptions['frac_dim'].mean(), descriptions['frac_dim'].std())
-
-            for col in descriptions.keys():
-                print(len(descriptions[col].unique()))
 
     def get_descriptions_by_clf(self, name):
         dfs = []
@@ -400,7 +379,8 @@ class ThesisCore(object):
             ybottom, ytop = axs[0][2].get_ylim()  # return the current ylim
             xbottom, xtop = axs[0][2].get_xlim()  # return the current xlim
             axs[0][2].text(xtop, ytop,
-                           'rho={r:.3f}\n p={p:.3f}'.format(r=df_corrs['overl_hvol_rho'][0], p=df_corrs['overl_hvol_p'][0]),
+                           'rho={r:.3f}\n p={p:.3f}'.format(r=df_corrs['overl_hvol_rho'][0],
+                                                            p=df_corrs['overl_hvol_p'][0]),
                            fontsize=9)
             sns.scatterplot(data=df, x='skew', y='clf_avg', ax=axs[1][0])
             ybottom, ytop = axs[1][0].get_ylim()  # return the current ylim

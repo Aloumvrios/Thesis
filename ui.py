@@ -1,4 +1,3 @@
-import os
 import sys
 from cmd import Cmd
 from thesis_core.thesis_core import ThesisCore
@@ -7,7 +6,6 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 pd.set_option('display.max_colwidth', None)
-import settings
 
 
 class UserInterface(Cmd):
@@ -46,9 +44,6 @@ class UserInterface(Cmd):
     def correlate_metafeatures_to_scores_of_all_reprs(self):
         self.thesis_core.correlate_metafeatures_to_scores_of_all_reprs()
 
-    def print_descriptions(self):
-        self.thesis_core.print_descriptions()
-
     def print_dataset_similarity(self):
         self.thesis_core.print_dataset_similarity()
 
@@ -60,12 +55,6 @@ class UserInterface(Cmd):
 
     def investigate_similarity_threshold2(self):
         self.thesis_core.investigate_similarity_threshold2()
-
-    def read_a_pickle(self):
-        # filename = 'FCGSR_descriptions_600_ds_2mer_3_distance'
-        filename = 'Spearman_FCGSR_2mer_600_ds_3_distance'
-        df = pd.read_pickle(filename)
-        print(df)
 
     def investigate_repr(self):
         self.thesis_core.investigate_repr()
@@ -91,7 +80,6 @@ if __name__ == '__main__':
     # ------------------------------------------------------------------
     # ui.describe_reprs()
     # ui.classify_reprs(fast_mode=True)
-    # ui.print_descriptions()
     # ui.print_dataset_similarity()
     # ui.spearman_heatmap_metaf_and_scores(fast_mode=False)
     # ui.regress_on_scores(fast_mode=False)
@@ -105,7 +93,4 @@ if __name__ == '__main__':
     # ui.investigate_similarity_threshold2()
     # ui.investigate_repr()
 
-    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-    # ui.read_a_pickle()
     sys.exit(0)
